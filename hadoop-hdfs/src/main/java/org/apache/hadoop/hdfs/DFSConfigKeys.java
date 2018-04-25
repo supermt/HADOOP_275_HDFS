@@ -890,4 +890,20 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int
       DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_DEFAULT =
       HdfsConstants.DEFAULT_DATA_SOCKET_SIZE;
+
+  public static final String DFS_CLIENT_FILTER_ENHANCER_LOCATION =
+          "dfs.client.filter-enhanced.location";
+  public static final String DFS_CLIENT_FILTER_ENHANCER_LOCATION_DEFAULT = "localhost:10086";
+
+  public static final String DFS_CLIENT_FILTER_ENHANCED_OR_NOT = "dfs.client.filter-enhanced.equipped";
+  public static final boolean DFS_CLIENT_FILTER_ENHANCED_OR_NOT_DEFAULT = false;
+
+  public static final String DFS_CLIENT_FILTER_ENHANCED_RETURN = "dfs.client.filter-enhanced.return";
+  public static final FILTER_ENHANCER_RETURN DFS_CLIENT_FILTER_ENHANCED_RETURN_DEFAULT = FILTER_ENHANCER_RETURN.FILE_LOCATION;
+
+  public enum FILTER_ENHANCER_RETURN{
+    FILE_LOCATION,
+    SOCKET_STREAM
+  }
+
 }
