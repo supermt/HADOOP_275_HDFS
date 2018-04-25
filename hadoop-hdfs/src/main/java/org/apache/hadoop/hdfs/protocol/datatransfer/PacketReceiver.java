@@ -27,6 +27,7 @@ import java.nio.channels.ReadableByteChannel;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.datanode.CurBlockInfo;
 import org.apache.hadoop.util.DirectBufferPool;
 import org.apache.hadoop.io.IOUtils;
 
@@ -143,6 +144,13 @@ public class PacketReceiver implements Closeable {
     }
     int dataPlusChecksumLen = payloadLen - Ints.BYTES;
     int headerLen = curPacketBuf.getShort();
+
+    //add by zzm
+    if(CurBlockInfo.blockfirstreceive){
+      headerLen += 8;
+    }
+    //end zzm
+
     if (headerLen < 0) {
       throw new IOException("Invalid header length " + headerLen);
     }
@@ -166,6 +174,14 @@ public class PacketReceiver implements Closeable {
         dataPlusChecksumLen + headerLen);
     curPacketBuf.clear();
     curPacketBuf.position(PacketHeader.PKT_LENGTHS_LEN);
+
+    //add by zzm
+    if(CurBlockInfo.blockfirstreceive){
+      headerLen -= 8;
+      CurBlockInfo.curblockincrease = curPacketBuf.getLong(PacketHeader.PKT_LENGTHS_LEN + headerLen);
+    }
+    //end zzm
+
     curPacketBuf.limit(PacketHeader.PKT_LENGTHS_LEN +
         dataPlusChecksumLen + headerLen);
     doReadFully(ch, in, curPacketBuf);
@@ -187,8 +203,21 @@ public class PacketReceiver implements Closeable {
           "exceeds data length received. dataPlusChecksumLen=" +
           dataPlusChecksumLen + " header: " + curHeader); 
     }
-    
+
+    //add by zzm
+    if(CurBlockInfo.blockfirstreceive){
+      headerLen += 8;
+    }
+    //end zzm
+
     reslicePacket(headerLen, checksumLen, curHeader.getDataLen());
+
+    //add by zzm
+    if(CurBlockInfo.blockfirstreceive){
+      headerLen -= 8;
+      CurBlockInfo.blockfirstreceive = false;
+    }
+    //end zzm
   }
   
   /**

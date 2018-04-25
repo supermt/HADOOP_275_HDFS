@@ -23,6 +23,7 @@ import java.io.DataOutputStream;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -122,7 +123,10 @@ class BlockSender implements java.io.Closeable {
   /** Current position of read */
   private long offset;
   /** Position of last byte to read from block file */
-  private final long endOffset;
+  //modify by zzm
+//  private final long endOffset;
+  private long endOffset;
+  //end zzm
   /** Number of bytes in chunk used for computing checksum */
   private final int chunkSize;
   /** Number bytes of checksum computed for a chunk */
@@ -574,7 +578,19 @@ class BlockSender implements java.io.Closeable {
     
     int dataOff = checksumOff + checksumDataLen;
     if (!transferTo) { // normal transfer
+      //add by zzm
+      if(CurBlockInfo.blockfirstsend){
+        ByteBuffer tmplongbuf = ByteBuffer.allocate(8);
+        tmplongbuf.putLong(CurBlockInfo.curblockincrease);
+        byte[] tmpbuf = tmplongbuf.array();
+        System.arraycopy(tmpbuf, 0, buf, dataOff, 8);
+        dataOff += 8;
+        CurBlockInfo.blockfirstsend = false;
+      }
+      //end zzm
+
       IOUtils.readFully(blockIn, buf, dataOff, dataLen);
+
 
       if (verifyChecksum) {
         verifyChecksum(buf, dataOff, dataLen, numChunks, checksumOff);
@@ -583,6 +599,18 @@ class BlockSender implements java.io.Closeable {
     
     try {
       if (transferTo) {
+
+        //add by zzm
+        if(CurBlockInfo.blockfirstsend) {
+          ByteBuffer tmplongbuf = ByteBuffer.allocate(8);
+          tmplongbuf.putLong(CurBlockInfo.curblockincrease);
+          byte[] tmpbuf = tmplongbuf.array();
+          System.arraycopy(tmpbuf, 0, buf, dataOff, 8);
+          dataOff += 8;
+          CurBlockInfo.blockfirstsend = false;
+        }
+        //end zzm
+
         SocketOutputStream sockOut = (SocketOutputStream)out;
         // First write header and checksums
         sockOut.write(buf, headerOff, dataOff - headerOff);
@@ -751,6 +779,30 @@ class BlockSender implements java.io.Closeable {
 
     final long startTime = ClientTraceLog.isDebugEnabled() ? System.nanoTime() : 0;
     try {
+      //add by zzm
+      synchronized(BlockSender.class){
+        String mypath = "/usr/local/tmp/temp";
+        String mydepath = "/usr/local/tmp/tmp";
+        OutputStream myout = new FileOutputStream(mypath);
+        IOUtils.copyBytes(blockIn, myout, 4096);
+        IOUtils.closeStream(myout);
+
+        try{
+          String mycommand = "/usr/local/tmp/decomp.sh";
+          Process pro = Runtime.getRuntime().exec(mycommand);
+          pro.waitFor();
+
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+        blockIn  = new FileInputStream(mydepath);
+
+      }
+      CurBlockInfo.curblockincrease = blockIn.available() - endOffset;
+      endOffset = blockIn.available();
+      //end zzm
+
+
       int maxChunksPerPacket;
       int pktBufSize = PacketHeader.PKT_MAX_HEADER_LEN;
       boolean transferTo = transferToAllowed && !verifyChecksum
@@ -770,6 +822,13 @@ class BlockSender implements java.io.Closeable {
         // Packet size includes both checksum and data
         pktBufSize += (chunkSize + checksumSize) * maxChunksPerPacket;
       }
+
+      //add by zzm
+      CurBlockInfo.blockfirstsend = true;
+      if(CurBlockInfo.blockfirstsend){
+        pktBufSize += 8;
+      }
+      //end zzm
 
       ByteBuffer pktBuf = ByteBuffer.allocate(pktBufSize);
 

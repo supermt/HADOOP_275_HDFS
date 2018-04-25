@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
+import org.apache.hadoop.hdfs.server.datanode.CurBlockInfo;
 import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
@@ -103,7 +104,12 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   int dataLeft = 0;
   
   private final PeerCache peerCache;
-  
+
+  //add by zzm
+  public boolean blockreceive = true;
+  //end zzm
+
+
   /* FSInputChecker interface */
   
   /* same interface as inputStream java.io.InputStream#read()
@@ -267,6 +273,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
       lastSeqNo = header.getSeqno();
       dataLeft = header.getDataLen();
       adjustChecksumBytes(header.getDataLen());
+      // ZZM wants to adjust
       if (header.getDataLen() > 0) {
         IOUtils.readFully(in, checksumBytes.array(), 0,
                           checksumBytes.limit());
@@ -309,7 +316,22 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
       assert bytesToRead <= len;
       assert checksumBytes.remaining() >= checksumSize * checksumsToRead;
       assert checksumBuf.length >= checksumSize * checksumsToRead;
+      //modify by zzm
+      if(blockreceive){
+        blockreceive = false;
+        byte[] tmpbuf = new byte[8];
+        IOUtils.readFully(in,tmpbuf, 0, 8);
+        ByteBuffer tmplongbuf = ByteBuffer.allocate(8);
+        tmplongbuf.put(tmpbuf, 0, tmpbuf.length);
+        tmplongbuf.flip();
+        CurBlockInfo.curblockincrease = tmplongbuf.getLong();
+        CurBlockInfo.blockfirstreceive = true;
+        CurBlockInfo.tomodifyendoff = true;
+        CurBlockInfo.tomodifylen = true;
+        CurBlockInfo.tomodifybytes = true;
+      }
       IOUtils.readFully(in, buf, offset, bytesToRead);
+      //end zzm
       checksumBytes.get(checksumBuf, 0, checksumSize * checksumsToRead);
     }
 

@@ -66,6 +66,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
+import org.apache.hadoop.hdfs.server.datanode.CurBlockInfo;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
@@ -118,6 +119,10 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   private FileEncryptionInfo fileEncryptionInfo = null;
   private CachingStrategy cachingStrategy;
   ////
+
+  //add by zzm
+  public long Curblocksizemodify = 0;
+  //end zzm
 
   private final ReadStatistics readStatistics = new ReadStatistics();
   // lock for state shared between read and pread
@@ -190,7 +195,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     public long getRemoteBytesRead() {
       return totalBytesRead - totalLocalBytesRead;
     }
-    
+
     void addRemoteBytes(long amt) {
       this.totalBytesRead += amt;
     }
@@ -430,8 +435,12 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   
   public long getFileLength() {
     synchronized(infoLock) {
+//      return locatedBlocks == null? 0:
+//          locatedBlocks.getFileLength() + lastBlockBeingWrittenLength;
+      // modified by ZZM
       return locatedBlocks == null? 0:
-          locatedBlocks.getFileLength() + lastBlockBeingWrittenLength;
+              locatedBlocks.getFileLength() + lastBlockBeingWrittenLength + Curblocksizemodify;
+      // end ZZM
     }
   }
 
@@ -876,12 +885,24 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           int realLen = (int) Math.min(len, (blockEnd - pos + 1L));
           synchronized(infoLock) {
             if (locatedBlocks.isLastBlockComplete()) {
+//              realLen = (int) Math.min(realLen,
+//                  locatedBlocks.getFileLength() - pos);
+              //modify by zzm
               realLen = (int) Math.min(realLen,
-                  locatedBlocks.getFileLength() - pos);
+                      locatedBlocks.getFileLength() + Curblocksizemodify  - pos);
+              //end zzm
             }
           }
           int result = readBuffer(strategy, off, realLen, corruptedBlockMap);
-          
+
+          //add by zzm
+          if(CurBlockInfo.tomodifyendoff){
+            blockEnd = blockEnd + CurBlockInfo.curblockincrease;
+            Curblocksizemodify = CurBlockInfo.curblockincrease;
+            CurBlockInfo.tomodifyendoff = false;
+          }
+          // end zzm
+
           if (result >= 0) {
             pos += result;
           } else {

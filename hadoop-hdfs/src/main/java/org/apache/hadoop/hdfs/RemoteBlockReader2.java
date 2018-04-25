@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
+import org.apache.hadoop.hdfs.server.datanode.CurBlockInfo;
 import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
@@ -163,7 +164,12 @@ public class RemoteBlockReader2  implements BlockReader {
       // we're at EOF now
       return -1;
     }
-    
+    //add by zzm
+    if(CurBlockInfo.tomodifylen){
+      len = curDataSlice.remaining();
+    }
+    //end zzm
+
     int nRead = Math.min(curDataSlice.remaining(), len);
     curDataSlice.get(buf, off, nRead);
     
@@ -199,7 +205,12 @@ public class RemoteBlockReader2  implements BlockReader {
   private void readNextPacket() throws IOException {
     //Read packet headers.
     packetReceiver.receiveNextPacket(in);
-
+    //add by zzm
+    if(CurBlockInfo.tomodifybytes){
+      bytesNeededToFinish += CurBlockInfo.curblockincrease;
+      CurBlockInfo.tomodifybytes = false;
+    }
+    //end zzm
     PacketHeader curHeader = packetReceiver.getHeader();
     curDataSlice = packetReceiver.getDataSlice();
     assert curDataSlice.capacity() == curHeader.getDataLen();
@@ -310,7 +321,9 @@ public class RemoteBlockReader2  implements BlockReader {
     // the amount that the user wants (bytesToRead), plus the padding at
     // the beginning in order to chunk-align. Note that the DN may elect
     // to send more than this amount if the read starts/ends mid-chunk.
+    //ZZM wants to modify here
     this.bytesNeededToFinish = bytesToRead + (startOffset - firstChunkOffset);
+    //end zzm
     bytesPerChecksum = this.checksum.getBytesPerChecksum();
     checksumSize = this.checksum.getChecksumSize();
   }

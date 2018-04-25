@@ -1836,7 +1836,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       FSPermissionChecker pc, final String srcArg, long offset, long length,
       boolean needBlockToken)
       throws IOException {
-    String src = srcArg;
+//    String src = srcArg;
+    // modified
+    String[] splits = srcArg.split("\\?");
+    String src;
+    if (splits.length >= 2){
+      src = splits[0];
+    } else {
+      src = srcArg;
+    }
+
     final INodesInPath iip = dir.resolvePath(pc, src);
     src = iip.getPath();
     final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
@@ -1873,6 +1882,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean updateAccessTime = isAccessTimeSupported() && !isInSafeMode()
         && !iip.isSnapshot()
         && now > inode.getAccessTime() + getAccessTimePrecision();
+
+    //add by zmm
+    if (splits.length >= 2){
+      List<LocatedBlock> blockList = blocks.getLocatedBlocks();
+      for (LocatedBlock block : blockList){
+        block.getBlock().setConditions(splits[1]);
+      }
+    }
+    //end zzm
+
     return new GetBlockLocationsResult(updateAccessTime, blocks);
   }
 

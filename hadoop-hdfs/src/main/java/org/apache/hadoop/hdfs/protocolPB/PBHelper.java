@@ -599,13 +599,33 @@ public class PBHelper {
   }
   
   public static ExtendedBlockProto convert(final ExtendedBlock b) {
-    if (b == null) return null;
-   return ExtendedBlockProto.newBuilder().
-      setPoolId(b.getBlockPoolId()).
-      setBlockId(b.getBlockId()).
-      setNumBytes(b.getNumBytes()).
-      setGenerationStamp(b.getGenerationStamp()).
-      build();
+//    if (b == null) return null;
+//   return ExtendedBlockProto.newBuilder().
+//      setPoolId(b.getBlockPoolId()).
+//      setBlockId(b.getBlockId()).
+//      setNumBytes(b.getNumBytes()).
+//      setGenerationStamp(b.getGenerationStamp()).
+//      build();
+    //mofify by zzm
+    if(b.getConditions() == null)
+    {
+      return ExtendedBlockProto.newBuilder().
+              setPoolId(b.getBlockPoolId()).
+              setBlockId(b.getBlockId()).
+              setNumBytes(b.getNumBytes()).
+              setGenerationStamp(b.getGenerationStamp()).
+              build();
+    }
+    else
+    {
+      return ExtendedBlockProto.newBuilder().
+              setPoolId(b.getBlockPoolId()+ExtendedBlock.signalOfDivision+b.getConditions()).
+              setBlockId(b.getBlockId()).
+              setNumBytes(b.getNumBytes()).
+              setGenerationStamp(b.getGenerationStamp()).
+              build();
+    }
+    //end zzm
   }
   
   public static RecoveringBlockProto convert(RecoveringBlock b) {

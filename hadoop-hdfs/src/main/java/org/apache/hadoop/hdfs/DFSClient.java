@@ -1528,6 +1528,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public DFSInputStream open(String src, int buffersize, boolean verifyChecksum)
       throws IOException, UnresolvedLinkException {
+    // DANGEROUS!!!!!! force the code to skip verify Checksum process
+    verifyChecksum=false;
     checkOpen();
     //    Get block info from namenode
     TraceScope scope = getPathTraceScope("newDFSInputStream", src);

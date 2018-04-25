@@ -29,6 +29,22 @@ public class ExtendedBlock {
   private String poolId;
   private Block block;
 
+  //add by zzm
+
+  public static final String regexOfDivision = "\\?";
+  public static final String signalOfDivision = "?";
+  private String conditions = null;
+
+  public void setConditions(String conditions){
+    this.conditions = conditions;
+  }
+
+  public String getConditions(){
+    return this.conditions;
+  }
+
+  //end zzm
+
   public ExtendedBlock() {
     this(null, 0, 0, 0);
   }
@@ -48,8 +64,21 @@ public class ExtendedBlock {
 
   public ExtendedBlock(final String poolId, final long blkid, final long len,
       final long genstamp) {
-    this.poolId = poolId;
+    //modify by zzm
+    //    this.poolId = poolId;
+    //    block = new Block(blkid, len, genstamp);
+
+    String[] splits = poolId.split(ExtendedBlock.regexOfDivision);
+    if (splits.length >= 2){
+      this.poolId = splits[0];
+      setConditions(splits[1]);
+    }
+    else
+    {
+      this.poolId = poolId;
+    }
     block = new Block(blkid, len, genstamp);
+    //end zzm
   }
 
   public String getBlockPoolId() {
