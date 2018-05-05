@@ -33,7 +33,7 @@ public class ExtendedBlock {
 
   public static final String regexOfDivision = "\\?";
   public static final String signalOfDivision = "?";
-  private String conditions = null;
+  private String conditions = "";
 
   public void setConditions(String conditions){
     this.conditions = conditions;

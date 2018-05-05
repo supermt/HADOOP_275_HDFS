@@ -6,9 +6,10 @@ import org.apache.hadoop.hdfs.DFSConfigKeys.FILTER_ENHANCER_RETURN;
 public class FilterConfig
 {
     private static String enhancer_host;
-    private static String enhancer_port;
+    private static int enhancer_port;
     private static boolean enhanced;
     private static FILTER_ENHANCER_RETURN filter_enhancer_return;
+    private static int max_file_length = 255;
 
     public static void init(Configuration conf)
     {
@@ -18,7 +19,7 @@ public class FilterConfig
             String enhancerLocation = conf.get(DFSConfigKeys.DFS_CLIENT_FILTER_ENHANCER_LOCATION,
                     DFSConfigKeys.DFS_CLIENT_FILTER_ENHANCER_LOCATION_DEFAULT);
             enhancer_host = enhancerLocation.split(":")[0];
-            enhancer_port = enhancerLocation.split(":")[1];
+            enhancer_port = Integer.valueOf(enhancerLocation.split(":")[1]);
             filter_enhancer_return = conf.getEnum(DFSConfigKeys.DFS_CLIENT_FILTER_ENHANCED_RETURN,
                     DFSConfigKeys.DFS_CLIENT_FILTER_ENHANCED_RETURN_DEFAULT);
         }
@@ -29,7 +30,7 @@ public class FilterConfig
         return enhancer_host;
     }
 
-    public static String getEnhancerPort()
+    public static int getEnhancerPort()
     {
         return enhancer_port;
     }
@@ -42,5 +43,10 @@ public class FilterConfig
     public static FILTER_ENHANCER_RETURN getFilter_enhancer_return()
     {
         return filter_enhancer_return;
+    }
+
+    public static int getMax_file_length()
+    {
+        return max_file_length;
     }
 }
