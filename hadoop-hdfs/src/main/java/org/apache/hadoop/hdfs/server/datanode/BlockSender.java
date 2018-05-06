@@ -804,55 +804,7 @@ class BlockSender
 
     final long startTime = ClientTraceLog.isDebugEnabled() ? System.nanoTime() : 0;
     try {
-      // try to read file and transport
-      // escape if the enhancer is not equipped
-      boolean equipped = FilterConfig.isEnhanced();
-
-      if (equipped && blockIn instanceof FileInputStream) {
-        // if the filtering enhancer is enhanced
-        synchronized (BlockSender.class) {
-          // get the condition from the HDFS protocol
-          String payload = block.getConditions() + "@" + datanode.data.getBlockLocalPathInfo(block).getBlockPath();
-          // connect to Server Socket
-          Socket clientSocket = new Socket(FilterConfig.getEnhancerHost(), FilterConfig.getEnhancerPort());
-          // get the socket stream
-          OutputStream writer = clientSocket.getOutputStream();
-          InputStream reader = clientSocket.getInputStream();
-          // send the message and wait for response
-          writer.write(payload.getBytes());
-          clientSocket.shutdownOutput();
-
-          switch (FilterConfig.getFilter_enhancer_return()) {
-            case FILE_LOCATION: {
-              byte[] readBuffer = new byte[255];
-              int path_count = 0;
-              int len;
-              StringBuilder pathBuilder = new StringBuilder();
-              reader = clientSocket.getInputStream();
-              try {
-                while (true) {
-                  len = reader.read(readBuffer);
-                  if (len > 0) {
-                    pathBuilder.append(new String(readBuffer, 0, len, "UTF-8"));
-                    path_count += len;
-                  } else break;
-                }
-              } catch (Exception e) {
-                ClientTraceLog.error(e.getStackTrace());
-              } finally {
-                if (path_count > 0) {
-                  blockIn = new FileInputStream(pathBuilder.toString());
-                }
-                break;
-              }
-            }
-            case SOCKET_STREAM: {
-              blockIn = clientSocket.getInputStream();
-              break;
-            }
-          }
-        }
-      }
+      blockIn = checkEnhancer(blockIn);
 
       // ZZM's modification, try to update the system
       CurBlockInfo.curblockincrease = blockIn.available() - endOffset;
@@ -918,6 +870,66 @@ class BlockSender
       close();
     }
     return totalRead;
+  }
+
+  private InputStream checkEnhancer(InputStream origin) throws IOException {
+    // try to read file and transport
+    // escape if the enhancer is not equipped
+    boolean equipped = FilterConfig.isEnhanced();
+
+    InputStream blockIn = origin;
+
+    if (equipped && origin instanceof FileInputStream) {
+      // if the filtering enhancer is enhanced
+      synchronized (BlockSender.class) {
+        // get the condition from the HDFS protocol
+        String payload = block.getConditions() + "@" + datanode.data.getBlockLocalPathInfo(block).getBlockPath();
+        // connect to Server Socket
+        Socket clientSocket = null;
+        try {
+          clientSocket = new Socket(FilterConfig.getEnhancerHost(), FilterConfig.getEnhancerPort());
+          // get the socket stream
+        } catch (Exception e) {
+          ClientTraceLog.error(e.getStackTrace());
+        }
+        if (clientSocket == null) return origin;
+        OutputStream writer = clientSocket.getOutputStream();
+        InputStream reader = clientSocket.getInputStream();
+        // send the message and wait for response
+        writer.write(payload.getBytes());
+        clientSocket.shutdownOutput();
+        switch (FilterConfig.getFilter_enhancer_return()) {
+          case FILE_LOCATION: {
+            byte[] readBuffer = new byte[255];
+            int path_count = 0;
+            int len;
+            StringBuilder pathBuilder = new StringBuilder();
+            reader = clientSocket.getInputStream();
+            try {
+              while (true) {
+                len = reader.read(readBuffer);
+                if (len > 0) {
+                  pathBuilder.append(new String(readBuffer, 0, len, "UTF-8"));
+                  path_count += len;
+                } else break;
+              }
+            } catch (Exception e) {
+              ClientTraceLog.error(e.getStackTrace());
+            } finally {
+              if (path_count > 0) {
+                blockIn = new FileInputStream(pathBuilder.toString());
+              }
+              break;
+            }
+          }
+          case SOCKET_STREAM: {
+            blockIn = clientSocket.getInputStream();
+            break;
+          }
+        }
+      }
+    }
+    return blockIn;
   }
 
   /**

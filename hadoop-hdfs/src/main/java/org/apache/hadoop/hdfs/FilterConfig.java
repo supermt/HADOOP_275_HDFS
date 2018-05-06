@@ -9,7 +9,7 @@ public class FilterConfig
     private static int enhancer_port;
     private static boolean enhanced;
     private static FILTER_ENHANCER_RETURN filter_enhancer_return;
-    private static int max_file_length = 255;
+    private static int file_name_length = 255;
 
     public static void init(Configuration conf)
     {
@@ -45,8 +45,8 @@ public class FilterConfig
         return filter_enhancer_return;
     }
 
-    public static int getMax_file_length()
+    public static int getFile_name_length()
     {
-        return max_file_length;
+        return file_name_length;
     }
 }
