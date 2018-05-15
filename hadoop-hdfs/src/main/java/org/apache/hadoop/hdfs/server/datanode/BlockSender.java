@@ -879,7 +879,7 @@ class BlockSender
 
     InputStream blockIn = origin;
 
-    if (equipped && origin instanceof FileInputStream) {
+    if (equipped && origin instanceof FileInputStream && block.getConditions() != null) {
       // if the filtering enhancer is enhanced
       synchronized (BlockSender.class) {
         // get the condition from the HDFS protocol
